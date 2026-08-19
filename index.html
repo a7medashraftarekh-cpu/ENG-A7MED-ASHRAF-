@@ -47,7 +47,17 @@
       radial-gradient(50vw 35vw at 5% 10%, rgba(53,212,255,0.12), transparent 60%);
   }
   a{ color:inherit; text-decoration:none; }
-  img{ max-width:100%; display:block; }
+  img{ max-width:100%; display:block; -webkit-user-drag: none; user-select: none; }
+
+  /* منع تحديد/نسخ النص - رادع بسيط فقط */
+  body{
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  /* السماح بتحديد النصوص داخل عناصر معينة لو احتجت مستقبلاً، مثال:
+     .allow-select{ user-select: text; } */
   ::selection{ background: var(--cyan); color:#04121a; }
   :focus-visible{ outline: 2px solid var(--cyan); outline-offset: 3px; }
 
@@ -425,6 +435,43 @@
 </footer>
 
 <script>
+  // ====== روادع منع النسخ/الحفظ - كلها قابلة للتجاوز من مستخدم متمرس، دي أقصى حماية ممكنة على مستوى المتصفح ======
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); });
+  document.addEventListener('copy', function(e){ e.preventDefault(); });
+  document.addEventListener('cut', function(e){ e.preventDefault(); });
+  document.addEventListener('selectstart', function(e){ e.preventDefault(); });
+
+  document.addEventListener('keydown', function(e){
+    const key = e.key ? e.key.toUpperCase() : '';
+    const blocked =
+      key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && (key === 'I' || key === 'J' || key === 'C')) ||
+      (e.ctrlKey && (key === 'U' || key === 'S' || key === 'P' || key === 'A'));
+    if(blocked){ e.preventDefault(); }
+  });
+
+  // كشف تقريبي لفتح DevTools عن طريق فرق أبعاد النافذة، وتعتيم المحتوى كتحذير
+  // ملاحظة: طريقة كشف تقريبية شائعة، مش مضمونة 100% وقابلة للتجاوز
+  (function(){
+    const threshold = 160;
+    let warned = false;
+    function checkDevTools(){
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      if(widthDiff > threshold || heightDiff > threshold){
+        if(!warned){
+          warned = true;
+          const overlay = document.createElement('div');
+          overlay.textContent = 'برجاء إغلاق أدوات المطور للمتابعة';
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#060810;color:#e7ecf5;display:flex;align-items:center;justify-content:center;font-family:Tajawal,sans-serif;font-size:18px;text-align:center;padding:20px;';
+          document.body.appendChild(overlay);
+        }
+      }
+    }
+    setInterval(checkDevTools, 1000);
+  })();
+
   // 3D tilt on hero photo card
   const card = document.getElementById('tiltCard');
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
