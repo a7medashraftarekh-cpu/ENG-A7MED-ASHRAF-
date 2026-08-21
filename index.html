@@ -435,42 +435,227 @@
 </footer>
 
 <script>
-  // ====== روادع منع النسخ/الحفظ - كلها قابلة للتجاوز من مستخدم متمرس، دي أقصى حماية ممكنة على مستوى المتصفح ======
-  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
-  document.addEventListener('dragstart', function(e){ e.preventDefault(); });
-  document.addEventListener('copy', function(e){ e.preventDefault(); });
-  document.addEventListener('cut', function(e){ e.preventDefault(); });
-  document.addEventListener('selectstart', function(e){ e.preventDefault(); });
-
-  document.addEventListener('keydown', function(e){
-    const key = e.key ? e.key.toUpperCase() : '';
-    const blocked =
-      key === 'F12' ||
-      (e.ctrlKey && e.shiftKey && (key === 'I' || key === 'J' || key === 'C')) ||
-      (e.ctrlKey && (key === 'U' || key === 'S' || key === 'P' || key === 'A'));
-    if(blocked){ e.preventDefault(); }
-  });
-
-  // كشف تقريبي لفتح DevTools عن طريق فرق أبعاد النافذة، وتعتيم المحتوى كتحذير
-  // ملاحظة: طريقة كشف تقريبية شائعة، مش مضمونة 100% وقابلة للتجاوز
-  (function(){
-    const threshold = 160;
-    let warned = false;
-    function checkDevTools(){
-      const widthDiff = window.outerWidth - window.innerWidth;
-      const heightDiff = window.outerHeight - window.innerHeight;
-      if(widthDiff > threshold || heightDiff > threshold){
-        if(!warned){
-          warned = true;
-          const overlay = document.createElement('div');
-          overlay.textContent = 'برجاء إغلاق أدوات المطور للمتابعة';
-          overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#060810;color:#e7ecf5;display:flex;align-items:center;justify-content:center;font-family:Tajawal,sans-serif;font-size:18px;text-align:center;padding:20px;';
-          document.body.appendChild(overlay);
-        }
-      }
+<style>
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
     }
-    setInterval(checkDevTools, 1000);
-  })();
+    img, video, canvas {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+    }
+    #devtools-blocker {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: #0a0a0a;
+        z-index: 999999999;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+    #devtools-blocker.active {
+        display: flex !important;
+    }
+    #devtools-blocker h1 {
+        color: #ff3333;
+        font-size: 3rem;
+        margin-bottom: 20px;
+        text-align: center;
+        text-shadow: 0 0 20px #ff3333;
+        animation: pulse 1.5s infinite;
+    }
+    #devtools-blocker p {
+        color: #ccc;
+        font-size: 1.5rem;
+        text-align: center;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.05); }
+    }
+</style>
+
+<div id="devtools-blocker">
+    <h1>🚫 توقف!</h1>
+    <p>تعبتك معايا متحاولش تاني<br>أنا مش تلميذ</p>
+</div>
+
+<script>
+(function() {
+    'use strict';
+    
+    // 1. منع كليك يمين
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }, true);
+    
+    // 2. منع سحب الصور
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }, true);
+    
+    // 3. منع اختيار النص
+    document.addEventListener('selectstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }, true);
+    
+    // 4. منع اختصارات الكيبورد
+    document.addEventListener('keydown', function(e) {
+        var key = e.key || e.keyCode;
+        
+        if (key === 'F12' || e.keyCode === 123) {
+            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
+        }
+        if ((e.ctrlKey && e.shiftKey && (key === 'I' || e.keyCode === 73)) ||
+            (e.metaKey && e.altKey && (key === 'I' || e.keyCode === 73))) {
+            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
+        }
+        if ((e.ctrlKey && e.shiftKey && (key === 'J' || e.keyCode === 74)) ||
+            (e.metaKey && e.altKey && (key === 'J' || e.keyCode === 74))) {
+            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
+        }
+        if ((e.ctrlKey && e.shiftKey && (key === 'C' || e.keyCode === 67)) ||
+            (e.metaKey && e.altKey && (key === 'C' || e.keyCode === 67))) {
+            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
+        }
+        if (e.ctrlKey && (key === 'u' || e.keyCode === 85)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+        if (e.ctrlKey && (key === 's' || e.keyCode === 83)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+        if (e.ctrlKey && (key === 'p' || e.keyCode === 80)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+        if (e.ctrlKey && (key === 'a' || e.keyCode === 65)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+        if (e.ctrlKey && (key === 'c' || e.keyCode === 67)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+        if (e.ctrlKey && (key === 'x' || e.keyCode === 88)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+        if (e.ctrlKey && (key === 'v' || e.keyCode === 86)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+        if (e.ctrlKey && e.shiftKey && (key === 'K' || e.keyCode === 75)) {
+            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
+        }
+        if (key === 'Escape' || e.keyCode === 27) {
+            e.preventDefault(); e.stopPropagation(); return false;
+        }
+    }, true);
+    
+    // 5. كشف أدوات المطورين
+    var devtoolsOpen = false;
+    var threshold = 160;
+    
+    function showBlocker() {
+        document.getElementById('devtools-blocker').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function hideBlocker() {
+        document.getElementById('devtools-blocker').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    
+    // فحص حجم النافذة
+    var checkWindowSize = function() {
+        var widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        var heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        if (widthThreshold || heightThreshold) {
+            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
+        } else {
+            if (devtoolsOpen) { devtoolsOpen = false; hideBlocker(); }
+        }
+    };
+    
+    // فحص console
+    var element = new Image();
+    Object.defineProperty(element, 'id', {
+        get: function() {
+            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
+            throw new Error('DevTools detected');
+        }
+    });
+    
+    // فحص performance timing
+    var checkPerformance = function() {
+        var start = performance.now();
+        debugger;
+        var end = performance.now();
+        if (end - start > 100) {
+            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
+        }
+    };
+    
+    // فحص console.clear
+    var checkConsole = function() {
+        var before = new Date().getTime();
+        console.clear();
+        var after = new Date().getTime();
+        if (after - before > 100) {
+            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
+        }
+    };
+    
+    setInterval(function() {
+        checkWindowSize();
+        checkPerformance();
+        checkConsole();
+        console.log(element);
+    }, 500);
+    
+    // 6. تعطيل console
+    var noop = function() {};
+    var methods = ['log','debug','info','warn','error','table','trace','group','groupCollapsed','groupEnd','time','timeEnd','profile','profileEnd','dir','dirxml','assert','count','countReset','clear'];
+    for (var i = 0; i < methods.length; i++) {
+        console[methods[i]] = noop;
+    }
+    
+    // 7. منع eval
+    window.eval = function() { showBlocker(); return undefined; };
+    
+    // 8. منع Function constructor
+    window.Function = function() { showBlocker(); return function() {}; };
+    
+    // 9. منع الطباعة
+    window.addEventListener('beforeprint', function(e) {
+        e.preventDefault(); e.stopPropagation(); return false;
+    }, true);
+    
+    // 10. منع iframe
+    if (window.top !== window.self) {
+        window.top.location = window.self.location;
+    }
+    
+    // 11. تمويه عند مغادرة الصفحة
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            document.body.style.filter = 'blur(50px)';
+        } else {
+            document.body.style.filter = '';
+        }
+    });
+})();
+})();
 
   // 3D tilt on hero photo card
   const card = document.getElementById('tiltCard');
