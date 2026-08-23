@@ -467,6 +467,8 @@
     'use strict';
 
     var blocked = false;
+    var initialHeight = window.innerHeight;
+    var initialWidth = window.innerWidth;
 
     function showBlocker() {
         if (blocked) return;
@@ -474,9 +476,8 @@
         var blocker = document.getElementById('devtools-blocker');
         if(blocker) blocker.classList.add('active');
         document.body.style.overflow = 'hidden';
-        // نمسح كل المحتوى عشان مفيش حاجة تتعرض
         setTimeout(function() {
-            document.documentElement.innerHTML = '<div id="devtools-blocker" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0a;z-index:999999999;justify-content:center;align-items:center;flex-direction:column;font-family:Segoe UI,Tahoma,sans-serif;"><h1 style="color:#ff3333;font-size:3rem;margin-bottom:20px;text-align:center;text-shadow:0 0 20px #ff3333;">🚫 توقف!</h1><p style="color:#ccc;font-size:1.5rem;text-align:center;">تعبتك معايا متحاولش تاني<br>أنا مش تلميذ</p></div>';
+            document.documentElement.innerHTML = '<div style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0a;z-index:999999999;justify-content:center;align-items:center;flex-direction:column;font-family:Segoe UI,Tahoma,sans-serif;"><h1 style="color:#ff3333;font-size:3rem;margin-bottom:20px;text-align:center;text-shadow:0 0 20px #ff3333;">🚫 توقف!</h1><p style="color:#ccc;font-size:1.5rem;text-align:center;">تعبتك معايا متحاولش تاني<br>أنا مش تلميذ</p></div>';
         }, 100);
     }
 
@@ -523,14 +524,23 @@
     }, true);
 
     // 5. كشف DevTools - حجم النافذة (كمبيوتر)
-    var threshold = 160;
     var checkWindowSize = function() {
         var w = window.outerWidth - window.innerWidth;
         var h = window.outerHeight - window.innerHeight;
-        if (w > threshold || h > threshold) showBlocker();
+        if (w > 160 || h > 160) showBlocker();
     };
 
-    // 6. كشف DevTools - debugger timing (أقوى طريقة على الموبايل)
+    // 6. كشف DevTools - تغيير حجم الشاشة على الموبايل
+    var checkResizeMobile = function() {
+        var currentHeight = window.innerHeight;
+        var currentWidth = window.innerWidth;
+        var heightDiff = Math.abs(initialHeight - currentHeight);
+        var widthDiff = Math.abs(initialWidth - currentWidth);
+        // لو اختلف حجم الشاشة كتير (DevTools فتح من تحت أو من الجنب)
+        if (heightDiff > 100 || widthDiff > 100) showBlocker();
+    };
+
+    // 7. كشف DevTools - debugger timing
     var checkDebugger = function() {
         var start = performance.now();
         debugger;
@@ -538,7 +548,7 @@
         if (end - start > 200) showBlocker();
     };
 
-    // 7. كشف DevTools - console.log مع getter
+    // 8. كشف DevTools - console.log مع getter
     var checkConsoleGetter = function() {
         var img = new Image();
         var fired = false;
@@ -551,7 +561,30 @@
         try { console.log(img); } catch(e) {}
     };
 
-    // 8. كشف DevTools - Error.stack
+    // 9. كشف DevTools - فحص DOM لو فيه عناصر devtools
+    var checkDOM = function() {
+        var devtoolsElements = document.querySelectorAll('[class*="devtools"], [id*="devtools"], [class*="inspector"], [id*="inspector"]');
+        if (devtoolsElements.length > 0) showBlocker();
+    };
+
+    // 10. كشف DevTools - فحص عدد iframes
+    var checkIframes = function() {
+        var iframes = document.querySelectorAll('iframe');
+        if (iframes.length > 0) {
+            for (var k = 0; k < iframes.length; k++) {
+                var src = iframes[k].src || '';
+                if (src.indexOf('devtools') !== -1) showBlocker();
+            }
+        }
+    };
+
+    // 11. كشف DevTools - فحص URL
+    var checkURL = function() {
+        var href = window.location.href;
+        if (href.indexOf('devtools') !== -1) showBlocker();
+    };
+
+    // 12. كشف DevTools - Error.stack
     var checkStack = function() {
         var err = new Error();
         if (err.stack && (err.stack.indexOf('DevTools') !== -1 || err.stack.indexOf('inspect') !== -1)) {
@@ -559,7 +592,7 @@
         }
     };
 
-    // 9. كشف DevTools - console.count
+    // 13. كشف DevTools - console.count timing
     var checkConsoleCount = function() {
         var start = performance.now();
         console.count();
@@ -567,51 +600,73 @@
         if (end - start > 100) showBlocker();
     };
 
-    // 10. كشف DevTools - toString على console.log
+    // 14. كشف DevTools - toString
     var checkToString = function() {
-        if (console.log.toString().indexOf('[native code]') === -1) {
-            showBlocker();
-        }
+        if (console.log.toString().indexOf('[native code]') === -1) showBlocker();
     };
 
-    // 11. كشف DevTools - firebug
+    // 15. كشف DevTools - firebug
     if (window.console && window.console.firebug) showBlocker();
 
-    // 12. كشف DevTools - __REACT_DEVTOOLS_GLOBAL_HOOK__
+    // 16. كشف DevTools - React DevTools
     if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) showBlocker();
 
-    // تشغيل كل الفحوصات كل 300ms
+    // تشغيل كل الفحوصات كل 200ms (أسرع)
     setInterval(function() {
         checkWindowSize();
+        checkResizeMobile();
         checkDebugger();
         checkConsoleGetter();
+        checkDOM();
+        checkIframes();
+        checkURL();
         checkStack();
         checkConsoleCount();
         checkToString();
-    }, 300);
+    }, 200);
 
-    // 13. تعطيل console
+    // 17. MutationObserver - لو اتضاف عنصر devtools
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length) {
+                for (var j = 0; j < mutation.addedNodes.length; j++) {
+                    var node = mutation.addedNodes[j];
+                    if (node.nodeType === 1) {
+                        var cls = node.className || '';
+                        var id = node.id || '';
+                        if (cls.indexOf('devtools') !== -1 || id.indexOf('devtools') !== -1 ||
+                            cls.indexOf('inspector') !== -1 || id.indexOf('inspector') !== -1) {
+                            showBlocker();
+                        }
+                    }
+                }
+            }
+        });
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    // 18. تعطيل console
     var noop = function() {};
     var methods = ['log','debug','info','warn','error','table','trace','group','groupCollapsed','groupEnd','time','timeEnd','profile','profileEnd','dir','dirxml','assert','count','countReset','clear'];
     for (var i = 0; i < methods.length; i++) {
         console[methods[i]] = noop;
     }
 
-    // 14. منع eval و Function
+    // 19. منع eval و Function
     window.eval = function() { showBlocker(); return undefined; };
     window.Function = function() { showBlocker(); return function() {}; };
 
-    // 15. منع الطباعة
+    // 20. منع الطباعة
     window.addEventListener('beforeprint', function(e) {
         e.preventDefault(); e.stopPropagation(); return false;
     }, true);
 
-    // 16. منع iframe
+    // 21. منع iframe
     if (window.top !== window.self) {
         window.top.location = window.self.location;
     }
 
-    // 17. تمويه عند مغادرة الصفحة
+    // 22. تمويه عند مغادرة الصفحة
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
             document.body.style.filter = 'blur(50px)';
@@ -619,19 +674,6 @@
             document.body.style.filter = '';
         }
     });
-
-    // 18. كشف DevTools - ResizeObserver (بعض المتصفحات)
-    if (typeof ResizeObserver !== 'undefined') {
-        var ro = new ResizeObserver(function(entries) {
-            for (var j = 0; j < entries.length; j++) {
-                var cr = entries[j].contentRect;
-                if (cr.width === 0 && cr.height === 0) {
-                    showBlocker();
-                }
-            }
-        });
-        ro.observe(document.documentElement);
-    }
 
 })();
 </script>
