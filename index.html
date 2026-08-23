@@ -466,96 +466,71 @@
 (function() {
     'use strict';
 
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }, true);
-
-    document.addEventListener('dragstart', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }, true);
-
-    document.addEventListener('selectstart', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }, true);
-
-    document.addEventListener('keydown', function(e) {
-        var key = e.key || e.keyCode;
-
-        if (key === 'F12' || e.keyCode === 123) {
-            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
-        }
-        if ((e.ctrlKey && e.shiftKey && (key === 'I' || e.keyCode === 73)) ||
-            (e.metaKey && e.altKey && (key === 'I' || e.keyCode === 73))) {
-            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
-        }
-        if ((e.ctrlKey && e.shiftKey && (key === 'J' || e.keyCode === 74)) ||
-            (e.metaKey && e.altKey && (key === 'J' || e.keyCode === 74))) {
-            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
-        }
-        if ((e.ctrlKey && e.shiftKey && (key === 'C' || e.keyCode === 67)) ||
-            (e.metaKey && e.altKey && (key === 'C' || e.keyCode === 67))) {
-            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
-        }
-        if (e.ctrlKey && (key === 'u' || e.keyCode === 85)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.ctrlKey && (key === 's' || e.keyCode === 83)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.ctrlKey && (key === 'p' || e.keyCode === 80)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.ctrlKey && (key === 'a' || e.keyCode === 65)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.ctrlKey && (key === 'c' || e.keyCode === 67)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.ctrlKey && (key === 'x' || e.keyCode === 88)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.ctrlKey && (key === 'v' || e.keyCode === 86)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.ctrlKey && e.shiftKey && (key === 'K' || e.keyCode === 75)) {
-            e.preventDefault(); e.stopPropagation(); showBlocker(); return false;
-        }
-        if (key === 'Escape' || e.keyCode === 27) {
-            e.preventDefault(); e.stopPropagation(); return false;
-        }
-    }, true);
-
-    var devtoolsOpen = false;
-    var threshold = 160;
-
     function showBlocker() {
         var blocker = document.getElementById('devtools-blocker');
         if(blocker) blocker.classList.add('active');
         document.body.style.overflow = 'hidden';
+        try { document.documentElement.innerHTML = ''; } catch(e) {}
     }
 
-    function hideBlocker() {
-        var blocker = document.getElementById('devtools-blocker');
-        if(blocker) blocker.classList.remove('active');
-        document.body.style.overflow = '';
-    }
+    // 1. منع كليك يمين
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault(); e.stopPropagation(); return false;
+    }, true);
 
-    var checkWindowSize = function() {
-        var widthThreshold = window.outerWidth - window.innerWidth > threshold;
-        var heightThreshold = window.outerHeight - window.innerHeight > threshold;
-        if (widthThreshold || heightThreshold) {
-            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
-        } else {
-            if (devtoolsOpen) { devtoolsOpen = false; hideBlocker(); }
+    // 2. منع سحب الصور
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault(); e.stopPropagation(); return false;
+    }, true);
+
+    // 3. منع اختيار النص
+    document.addEventListener('selectstart', function(e) {
+        e.preventDefault(); e.stopPropagation(); return false;
+    }, true);
+
+    // 4. منع اختصارات الكيبورد
+    document.addEventListener('keydown', function(e) {
+        var key = e.key || e.keyCode;
+        var blocked = false;
+        if (key === 'F12' || e.keyCode === 123) blocked = true;
+        else if ((e.ctrlKey && e.shiftKey && (key === 'I' || e.keyCode === 73)) || (e.metaKey && e.altKey && (key === 'I' || e.keyCode === 73))) blocked = true;
+        else if ((e.ctrlKey && e.shiftKey && (key === 'J' || e.keyCode === 74)) || (e.metaKey && e.altKey && (key === 'J' || e.keyCode === 74))) blocked = true;
+        else if ((e.ctrlKey && e.shiftKey && (key === 'C' || e.keyCode === 67)) || (e.metaKey && e.altKey && (key === 'C' || e.keyCode === 67))) blocked = true;
+        else if (e.ctrlKey && (key === 'u' || e.keyCode === 85)) blocked = true;
+        else if (e.ctrlKey && (key === 's' || e.keyCode === 83)) blocked = true;
+        else if (e.ctrlKey && (key === 'p' || e.keyCode === 80)) blocked = true;
+        else if (e.ctrlKey && (key === 'a' || e.keyCode === 65)) blocked = true;
+        else if (e.ctrlKey && (key === 'c' || e.keyCode === 67)) blocked = true;
+        else if (e.ctrlKey && (key === 'x' || e.keyCode === 88)) blocked = true;
+        else if (e.ctrlKey && (key === 'v' || e.keyCode === 86)) blocked = true;
+        else if (e.ctrlKey && e.shiftKey && (key === 'K' || e.keyCode === 75)) blocked = true;
+        else if (key === 'Escape' || e.keyCode === 27) blocked = true;
+
+        if (blocked) {
+            e.preventDefault(); e.stopPropagation();
+            if (key === 'F12' || key === 'I' || key === 'J' || key === 'C' || key === 'K') showBlocker();
+            return false;
         }
+    }, true);
+
+    // 5. كشف DevTools - debugger timing
+    var checkDebugger = function() {
+        var start = performance.now();
+        debugger;
+        var end = performance.now();
+        if (end - start > 100) showBlocker();
     };
 
+    // 6. كشف DevTools - console.clear timing
+    var checkConsoleClear = function() {
+        var before = new Date().getTime();
+        console.clear();
+        var after = new Date().getTime();
+        if (after - before > 100) showBlocker();
+    };
+
+    // 7. كشف DevTools - Image id getter
+    var devtoolsOpen = false;
     var element = new Image();
     Object.defineProperty(element, 'id', {
         get: function() {
@@ -564,49 +539,65 @@
         }
     });
 
-    var checkPerformance = function() {
+    // 8. كشف DevTools - حجم النافذة
+    var threshold = 160;
+    var checkWindowSize = function() {
+        var widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        var heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        if (widthThreshold || heightThreshold) {
+            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
+        }
+    };
+
+    // 9. كشف DevTools - console.log timing
+    var checkConsoleLog = function() {
         var start = performance.now();
-        debugger;
-        var end = performance.now();
-        if (end - start > 100) {
-            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
-        }
-    };
-
-    var checkConsole = function() {
-        var before = new Date().getTime();
-        console.clear();
-        var after = new Date().getTime();
-        if (after - before > 100) {
-            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
-        }
-    };
-
-    setInterval(function() {
-        checkWindowSize();
-        checkPerformance();
-        checkConsole();
         console.log(element);
-    }, 500);
+        var end = performance.now();
+        if (end - start > 50) {
+            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
+        }
+    };
 
+    // 10. كشف DevTools - Function toString
+    var checkFunctionToString = function() {
+        var fn = function() {};
+        if (fn.toString().indexOf('[native code]') === -1) {
+            showBlocker();
+        }
+    };
+
+    // تشغيل كل الفحوصات باستمرار
+    setInterval(function() {
+        checkDebugger();
+        checkConsoleClear();
+        checkWindowSize();
+        checkConsoleLog();
+        checkFunctionToString();
+    }, 300);
+
+    // 11. تعطيل console
     var noop = function() {};
     var methods = ['log','debug','info','warn','error','table','trace','group','groupCollapsed','groupEnd','time','timeEnd','profile','profileEnd','dir','dirxml','assert','count','countReset','clear'];
     for (var i = 0; i < methods.length; i++) {
         console[methods[i]] = noop;
     }
 
+    // 12. منع eval و Function
     window.eval = function() { showBlocker(); return undefined; };
-
     window.Function = function() { showBlocker(); return function() {}; };
 
+    // 13. منع الطباعة
     window.addEventListener('beforeprint', function(e) {
         e.preventDefault(); e.stopPropagation(); return false;
     }, true);
 
+    // 14. منع iframe
     if (window.top !== window.self) {
         window.top.location = window.self.location;
     }
 
+    // 15. تمويه عند مغادرة الصفحة
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
             document.body.style.filter = 'blur(50px)';
@@ -614,6 +605,25 @@
             document.body.style.filter = '';
         }
     });
+
+    // 16. كشف MutationObserver للـ scripts
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length) {
+                for (var j = 0; j < mutation.addedNodes.length; j++) {
+                    var node = mutation.addedNodes[j];
+                    if (node.tagName === 'SCRIPT' && node.src && node.src.indexOf('devtools') !== -1) {
+                        showBlocker();
+                    }
+                }
+            }
+        });
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    // 17. كشف webdriver
+    if (navigator.webdriver) showBlocker();
+
 })();
 </script>
 
