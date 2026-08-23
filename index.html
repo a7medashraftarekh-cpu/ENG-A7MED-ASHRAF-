@@ -514,8 +514,6 @@
         else if (e.ctrlKey && (key === 'x' || e.keyCode === 88)) isBlocked = true;
         else if (e.ctrlKey && (key === 'v' || e.keyCode === 86)) isBlocked = true;
         else if (e.ctrlKey && e.shiftKey && (key === 'K' || e.keyCode === 75)) { isBlocked = true; isDev = true; }
-        else if (e.ctrlKey && e.shiftKey && (key === 'P' || e.keyCode === 80)) { isBlocked = true; isDev = true; }
-        else if (e.ctrlKey && (key === 'p' || e.keyCode === 112)) { isBlocked = true; isDev = true; }
         else if (key === 'Escape' || e.keyCode === 27) isBlocked = true;
 
         if (isBlocked) {
@@ -613,12 +611,6 @@
     // 16. كشف DevTools - React DevTools
     if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) showBlocker();
 
-    // 16b. كشف Command Palette مفتوح
-    var checkCommandPalette = function() {
-        var overlays = document.querySelectorAll('.devtools-overlay, .command-palette, [class*="command"], [id*="command"]');
-        if (overlays.length > 0) showBlocker();
-    };
-
     // تشغيل كل الفحوصات كل 200ms (أسرع)
     setInterval(function() {
         checkWindowSize();
@@ -631,7 +623,6 @@
         checkStack();
         checkConsoleCount();
         checkToString();
-        checkCommandPalette();
     }, 200);
 
     // 17. MutationObserver - لو اتضاف عنصر devtools
