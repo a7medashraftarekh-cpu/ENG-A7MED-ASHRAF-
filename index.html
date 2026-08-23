@@ -470,7 +470,6 @@
         var blocker = document.getElementById('devtools-blocker');
         if(blocker) blocker.classList.add('active');
         document.body.style.overflow = 'hidden';
-        try { document.documentElement.innerHTML = ''; } catch(e) {}
     }
 
     // 1. منع كليك يمين
@@ -492,10 +491,12 @@
     document.addEventListener('keydown', function(e) {
         var key = e.key || e.keyCode;
         var blocked = false;
-        if (key === 'F12' || e.keyCode === 123) blocked = true;
-        else if ((e.ctrlKey && e.shiftKey && (key === 'I' || e.keyCode === 73)) || (e.metaKey && e.altKey && (key === 'I' || e.keyCode === 73))) blocked = true;
-        else if ((e.ctrlKey && e.shiftKey && (key === 'J' || e.keyCode === 74)) || (e.metaKey && e.altKey && (key === 'J' || e.keyCode === 74))) blocked = true;
-        else if ((e.ctrlKey && e.shiftKey && (key === 'C' || e.keyCode === 67)) || (e.metaKey && e.altKey && (key === 'C' || e.keyCode === 67))) blocked = true;
+        var showDevBlocker = false;
+
+        if (key === 'F12' || e.keyCode === 123) { blocked = true; showDevBlocker = true; }
+        else if ((e.ctrlKey && e.shiftKey && (key === 'I' || e.keyCode === 73)) || (e.metaKey && e.altKey && (key === 'I' || e.keyCode === 73))) { blocked = true; showDevBlocker = true; }
+        else if ((e.ctrlKey && e.shiftKey && (key === 'J' || e.keyCode === 74)) || (e.metaKey && e.altKey && (key === 'J' || e.keyCode === 74))) { blocked = true; showDevBlocker = true; }
+        else if ((e.ctrlKey && e.shiftKey && (key === 'C' || e.keyCode === 67)) || (e.metaKey && e.altKey && (key === 'C' || e.keyCode === 67))) { blocked = true; showDevBlocker = true; }
         else if (e.ctrlKey && (key === 'u' || e.keyCode === 85)) blocked = true;
         else if (e.ctrlKey && (key === 's' || e.keyCode === 83)) blocked = true;
         else if (e.ctrlKey && (key === 'p' || e.keyCode === 80)) blocked = true;
@@ -503,101 +504,82 @@
         else if (e.ctrlKey && (key === 'c' || e.keyCode === 67)) blocked = true;
         else if (e.ctrlKey && (key === 'x' || e.keyCode === 88)) blocked = true;
         else if (e.ctrlKey && (key === 'v' || e.keyCode === 86)) blocked = true;
-        else if (e.ctrlKey && e.shiftKey && (key === 'K' || e.keyCode === 75)) blocked = true;
+        else if (e.ctrlKey && e.shiftKey && (key === 'K' || e.keyCode === 75)) { blocked = true; showDevBlocker = true; }
         else if (key === 'Escape' || e.keyCode === 27) blocked = true;
 
         if (blocked) {
             e.preventDefault(); e.stopPropagation();
-            if (key === 'F12' || key === 'I' || key === 'J' || key === 'C' || key === 'K') showBlocker();
+            if (showDevBlocker) showBlocker();
             return false;
         }
     }, true);
 
-    // 5. كشف DevTools - debugger timing
-    var checkDebugger = function() {
-        var start = performance.now();
-        debugger;
-        var end = performance.now();
-        if (end - start > 100) showBlocker();
-    };
-
-    // 6. كشف DevTools - console.clear timing
-    var checkConsoleClear = function() {
-        var before = new Date().getTime();
-        console.clear();
-        var after = new Date().getTime();
-        if (after - before > 100) showBlocker();
-    };
-
-    // 7. كشف DevTools - Image id getter
-    var devtoolsOpen = false;
-    var element = new Image();
-    Object.defineProperty(element, 'id', {
-        get: function() {
-            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
-            throw new Error('DevTools detected');
-        }
-    });
-
-    // 8. كشف DevTools - حجم النافذة
+    // 5. كشف DevTools - حجم النافذة (بس على الكمبيوتر)
     var threshold = 160;
+    var devtoolsOpen = false;
+
     var checkWindowSize = function() {
         var widthThreshold = window.outerWidth - window.innerWidth > threshold;
         var heightThreshold = window.outerHeight - window.innerHeight > threshold;
         if (widthThreshold || heightThreshold) {
             if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
+        } else {
+            if (devtoolsOpen) { devtoolsOpen = false; }
         }
     };
 
-    // 9. كشف DevTools - console.log timing
-    var checkConsoleLog = function() {
-        var start = performance.now();
-        console.log(element);
-        var end = performance.now();
-        if (end - start > 50) {
-            if (!devtoolsOpen) { devtoolsOpen = true; showBlocker(); }
-        }
+    // 6. كشف DevTools - console.log مع Object.defineProperty (آمن)
+    var checkConsole = function() {
+        var img = new Image();
+        var triggered = false;
+        Object.defineProperty(img, 'id', {
+            get: function() {
+                if (!triggered) { triggered = true; showBlocker(); }
+                return 'devtools';
+            }
+        });
+        try {
+            console.log('%c', img);
+        } catch(e) {}
     };
 
-    // 10. كشف DevTools - Function toString
-    var checkFunctionToString = function() {
-        var fn = function() {};
-        if (fn.toString().indexOf('[native code]') === -1) {
+    // 7. كشف DevTools - Error.stack analysis
+    var checkStack = function() {
+        var err = new Error();
+        if (err.stack && err.stack.indexOf('DevTools') !== -1) {
             showBlocker();
         }
     };
 
-    // تشغيل كل الفحوصات باستمرار
+    // تشغيل الفحوصات كل 500ms
     setInterval(function() {
-        checkDebugger();
-        checkConsoleClear();
         checkWindowSize();
-        checkConsoleLog();
-        checkFunctionToString();
-    }, 300);
+        checkConsole();
+        checkStack();
+    }, 500);
 
-    // 11. تعطيل console
+    // 8. تعطيل console (بس في production)
     var noop = function() {};
     var methods = ['log','debug','info','warn','error','table','trace','group','groupCollapsed','groupEnd','time','timeEnd','profile','profileEnd','dir','dirxml','assert','count','countReset','clear'];
     for (var i = 0; i < methods.length; i++) {
         console[methods[i]] = noop;
     }
 
-    // 12. منع eval و Function
+    // 9. منع eval و Function
     window.eval = function() { showBlocker(); return undefined; };
     window.Function = function() { showBlocker(); return function() {}; };
 
-    // 13. منع الطباعة
+    // 10. منع الطباعة
     window.addEventListener('beforeprint', function(e) {
         e.preventDefault(); e.stopPropagation(); return false;
     }, true);
 
-    // 14. منع iframe
+    // 11. منع iframe
     if (window.top !== window.self) {
         window.top.location = window.self.location;
     }
 
-    // 15. تمويه عند مغادرة الصفحة
+    // 12. تمويه عند مغادرة الصفحة
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
             document.body.style.filter = 'blur(50px)';
@@ -605,24 +587,6 @@
             document.body.style.filter = '';
         }
     });
-
-    // 16. كشف MutationObserver للـ scripts
-    var observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.addedNodes.length) {
-                for (var j = 0; j < mutation.addedNodes.length; j++) {
-                    var node = mutation.addedNodes[j];
-                    if (node.tagName === 'SCRIPT' && node.src && node.src.indexOf('devtools') !== -1) {
-                        showBlocker();
-                    }
-                }
-            }
-        });
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-
-    // 17. كشف webdriver
-    if (navigator.webdriver) showBlocker();
 
 })();
 </script>
