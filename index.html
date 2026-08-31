@@ -18,6 +18,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
+<script>
+  // يقرر بسرعة (قبل أي رسم) هل ننتظر الأنيميشن ولا نتخطاها
+  (function(){
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var shown = false;
+    try{ shown = sessionStorage.getItem('a7IntroShown') === '1'; }catch(e){}
+    var html = document.documentElement;
+    if(reduced || shown){ html.classList.add('no-intro'); }
+    else { html.classList.add('intro-lock'); }
+  })();
+</script>
+
 <style>
   :root{
     --bg: #060810;
@@ -292,9 +304,63 @@
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.7; transform: scale(1.05); }
   }
+
+  /* ====== إنترو: فيديو حقيقي (الراجل والشنطة) وبعدين الموقع نفسه (مش فورم عام) يطلع مكان الشنطة ====== */
+  html.intro-lock, html.intro-lock body{ overflow:hidden; height:100%; }
+
+  #intro-overlay{
+    position: fixed; inset:0; z-index: 100000;
+    background:#4879ff;
+    overflow:hidden;
+    transition: opacity .6s ease, visibility .6s ease;
+  }
+  html.no-intro #intro-overlay{ display:none; }
+
+  #introVideo{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; object-position:50% 45%;
+    background:#4879ff;
+  }
+
+  .intro-skip{
+    position:absolute; top:22px; inset-inline-end:22px; z-index:2;
+    font-family: var(--font-mono); font-size:12px; color: rgba(255,255,255,0.9);
+    border:1px solid rgba(255,255,255,0.4); padding:9px 16px; border-radius:999px;
+    cursor:pointer; background: rgba(0,0,0,0.12);
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .intro-skip:hover{ color:#fff; border-color:#fff; }
+
+  #intro-overlay.intro-hide{ opacity:0; visibility:hidden; pointer-events:none; }
+
+  #site-content{
+    display:block;
+    transform-origin: 47% 68%;
+    transform: scale(.035);
+    opacity:0;
+    animation: siteReveal 1.1s cubic-bezier(.3,1.4,.35,1) forwards;
+    animation-play-state: paused;
+  }
+  #site-content.reveal{ animation-play-state: running; }
+  html.no-intro #site-content{
+    animation:none; transform:none; opacity:1;
+  }
+  @keyframes siteReveal{
+    0%{ transform: scale(.035); opacity:0; }
+    55%{ transform: scale(1.035); opacity:1; }
+    100%{ transform: scale(1); opacity:1; }
+  }
 </style>
 </head>
 <body>
+
+<!-- ====== إنترو: فيديو الراجل والشنطة، وبعدها الموقع الحقيقي بتاعك يطلع من مكانها ====== -->
+<div id="intro-overlay">
+  <button type="button" class="intro-skip" id="introSkip">تخطي ⏭</button>
+  <video id="introVideo" src="intro-video.mp4" autoplay muted playsinline preload="auto"></video>
+</div>
+
+<div id="site-content">
 
 <nav>
   <div class="nav-inner">
@@ -456,6 +522,8 @@
   </div>
 </footer>
 
+</div><!-- /#site-content -->
+
 <!-- ====== حاجز أدوات المطورين ====== -->
 <div id="devtools-blocker">
     <h1>🚫 توقف!</h1>
@@ -591,6 +659,72 @@
     });
 
 })();
+</script>
+
+<script>
+  // ====== تشغيل فيديو الإنترو، وبعد ما يحط الشنطة الموقع الحقيقي بيطلع مكانها ======
+  (function(){
+    var overlay = document.getElementById('intro-overlay');
+    var video = document.getElementById('introVideo');
+    var skipBtn = document.getElementById('introSkip');
+    var siteContent = document.getElementById('site-content');
+    var html = document.documentElement;
+    var REVEAL_AT = 4.85;   // نهاية الفيديو (بعد ما يحط الشنطة، قبل أي فورم) — هنا الموقع نفسه يطلع
+    var done = false;
+
+    function finishIntro(instant){
+      if(done) return; done = true;
+      html.classList.remove('intro-lock');
+      try{ sessionStorage.setItem('a7IntroShown','1'); }catch(e){}
+
+      if(siteContent){
+        if(instant){
+          siteContent.style.animation = 'none';
+          siteContent.style.transform = 'scale(1)';
+          siteContent.style.opacity = '1';
+        } else {
+          siteContent.classList.add('reveal');
+        }
+      }
+
+      if(video){ try{ video.pause(); }catch(e){} }
+
+      if(overlay){
+        if(instant){
+          overlay.style.transition = 'none';
+          overlay.style.opacity = '0';
+          overlay.style.visibility = 'hidden';
+          overlay.style.pointerEvents = 'none';
+        } else {
+          overlay.classList.add('intro-hide');
+        }
+        var removeDelay = instant ? 0 : 650;
+        setTimeout(function(){
+          if(overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        }, removeDelay);
+      }
+    }
+
+    if(html.classList.contains('no-intro')){
+      finishIntro(true);
+    } else if(overlay && video){
+      video.addEventListener('timeupdate', function(){
+        if(video.currentTime >= REVEAL_AT) finishIntro(false);
+      });
+      // لو الفيديو مش عايز يشتغل (منع أوتوبلاي، خطأ تحميل، إلخ) متسبش الزائر واقف قدام شاشة فاضية
+      video.addEventListener('error', function(){ finishIntro(true); });
+      var playPromise = video.play && video.play();
+      if(playPromise && playPromise.catch){ playPromise.catch(function(){ finishIntro(true); }); }
+      // شبكة أمان لو الفيديو اتعلق لأي سبب
+      setTimeout(function(){ finishIntro(false); }, 8000);
+    } else if(overlay){
+      finishIntro(true);
+    }
+
+    if(skipBtn){
+      skipBtn.addEventListener('click', function(){ finishIntro(true); });
+    }
+  })();
 </script>
 
 <script>
