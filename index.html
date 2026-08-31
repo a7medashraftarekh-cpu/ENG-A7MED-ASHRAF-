@@ -19,13 +19,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <script>
-  // يقرر بسرعة (قبل أي رسم) هل ننتظر الأنيميشن ولا نتخطاها
+  // يقرر بسرعة (قبل أي رسم) هل ننتظر الأنيميشن ولا نتخطاها — بيشتغل كل مرة يفتح/يعمل ريفريش للصفحة
   (function(){
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var shown = false;
-    try{ shown = sessionStorage.getItem('a7IntroShown') === '1'; }catch(e){}
     var html = document.documentElement;
-    if(reduced || shown){ html.classList.add('no-intro'); }
+    if(reduced){ html.classList.add('no-intro'); }
     else { html.classList.add('intro-lock'); }
   })();
 </script>
@@ -675,7 +673,6 @@
     function finishIntro(instant){
       if(done) return; done = true;
       html.classList.remove('intro-lock');
-      try{ sessionStorage.setItem('a7IntroShown','1'); }catch(e){}
 
       if(siteContent){
         if(instant){
